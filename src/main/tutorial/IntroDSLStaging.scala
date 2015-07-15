@@ -35,6 +35,14 @@ object IntroDSLStaging extends App {
       }
     }
 
+    def getScalaFunction () = {
+      val (map, cm) = emitScala.emit(Map.empty,myprog)
+      val toplevelf = map(map.keysIterator.max)
+      val inputComplexVector = Vector(MyComplex(1.0, 1.0), MyComplex(1.0, 1.0), MyComplex(1.0, 1.0), MyComplex(1.0, 1.0))
+      val output = toplevelf(inputComplexVector)
+      println(output)
+    }
+
     val emitGraph = new GraphVizExport {
       override val IR: self.type = self
     }
@@ -43,6 +51,9 @@ object IntroDSLStaging extends App {
       override val IR: self.type = self
     }
 
+    val emitScala = new SPL_DSL2Scala {
+      override val IR: self.type = self
+    }
 
   }
 
@@ -53,6 +64,6 @@ object IntroDSLStaging extends App {
 
   dslprogram.graphvizexport()
   dslprogram.printMat()
-
+  dslprogram.getScalaFunction()
 
 }

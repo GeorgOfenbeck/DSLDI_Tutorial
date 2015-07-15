@@ -19,15 +19,16 @@ trait SPL_DSL2Scala extends Emit[Map[Int, Vector[MyComplex] => Vector[MyComplex]
       tp.rhs match{
         //--------------------------------Compose -----------------------------
         case Compose(Exp(a),Exp(b),size) => {
-          ???
+          val f: Vector[MyComplex] => Vector[MyComplex] = (in: Vector[MyComplex]) => fmap(a)(fmap(b)(in))
+          fmap + (tp.sym.id -> f)
         }
         //-------------------------------Tensor--------------------------------
         case Tensor(Exp(a),Exp(b),size) => {
           val f: Vector[MyComplex] => Vector[MyComplex] = (id2tp(a).rhs,id2tp(b).rhs) match {
             case (ConstDef(I(n)),_) => (in: Vector[MyComplex]) =>
-              ???
+              in.grouped(size/n).flatMap( chunk => fmap(b)(chunk)).toVector
             case (_,ConstDef(I(n))) => (in: Vector[MyComplex]) =>
-              ???
+              in.grouped(n).toList.transpose.map( chunk => fmap(a)(chunk.toVector)).transpose.flatten.toVector
             case _ => ??? //we dont support anything else for this tutorial
           }
           fmap + (tp.sym.id -> f)
@@ -37,7 +38,7 @@ trait SPL_DSL2Scala extends Emit[Map[Int, Vector[MyComplex] => Vector[MyComplex]
           val f: Vector[MyComplex] => Vector[MyComplex] =
             x match{
               case I(n) => ( (in: Vector[MyComplex]) => in )
-              case F_2() => ???
+              case F_2() => ( (in: Vector[MyComplex]) => Vector(in(0)+in(1),in(0)-in(1)) )
 
               case _ => ??? //we dont support anyting else for this tutorial
           }
