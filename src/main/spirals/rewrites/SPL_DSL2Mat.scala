@@ -20,11 +20,11 @@ trait SPL_DSL2Mat extends Emit[Map[Int,BlockFieldMatrix[Complex]]] {
    : Map[Int, BlockFieldMatrix[Complex]] = {
       tp.rhs match{
         //--------------------------------Compose -----------------------------
-
+        case Compose(Exp(a),Exp(b), size) => mmap + (tp.sym.id -> mmap(a).multiply( mmap(b) ))
         //-------------------------------Tensor--------------------------------
-
+        case Tensor(Exp(a),Exp(b), size) => mmap + (tp.sym.id -> kronecker(mmap(a),mmap(b)))
         //-------------------------------SPl Objects--------------------------------
-
+        case Const(x: SPL) => mmap + (tp.sym.id -> x.toMatrix())
         //------------------------------default traversal-----------------------------------------
         case InternalLambda(_,_,block,_,_) => block_callback(block,mmap)
         case _ => super.emitNode(tp,mmap,block_callback)
