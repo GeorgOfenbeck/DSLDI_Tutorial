@@ -10,11 +10,11 @@ object IntroDSLStaging extends App {
 //  val wht4 = (F_2 tensor I(2) ) compose (I(2) tensor F_2) //what we would like to have
   class MyDSLProgram extends SPL_DSL{
     self =>
-    def myprog(u: Rep[Unit]) = {
-      val leftside = tensor(F_2(), I(2))
-      val rightside = tensor(I(2), F_2())
-      val wht4 = compose(leftside, rightside)
-      wht4
+
+    def myprog(u: Rep[Unit]): Rep[SPL] = {
+      val i2: Rep[SPL] = I(2)
+      val f2: Rep[SPL] = F_2()
+      (f2 tensor i2) compose (i2 tensor f2)
     }
 
     def graphvizexport() = {
