@@ -59,5 +59,7 @@ object Math extends App{
 
   val input: dslobject.Exp[Double] = dslobject.myconst(3.0)
   import dslobject._
-  dslobject.mathfunction(input)
+  println(dslobject.mathfunction(input))
+  import myimplicits._
+  println(dslobject.mathfunction(3.0))
 }
