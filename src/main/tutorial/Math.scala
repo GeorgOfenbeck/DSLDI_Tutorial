@@ -1,7 +1,6 @@
 package tutorial
 
-import scala.lms.internal.Expressions
-
+import scala.lms.internal.{InternalFunctionsExp, InternalFunctions, Expressions}
 
 //thats the typeclass
 abstract class NumericOps[T,S[T]]/*(implicit val tag: Manifest[T])*/ {
@@ -14,10 +13,20 @@ abstract class VectorOps[S[_], V[_], T] {
   def unit(x: Int): S[Int]
 }
 
-
+abstract class MapOps[S[_], V[_], T] {
+  def callmapArray(x: S[V[T]], f: S[T] => S[T]): S[V[T]]
+}
 
 object myimplicits{
   type id[T] = T
+
+  implicit object UnstagedFDouble extends MapOps[id,Vector,Double]{
+    def callmapArray(x: id[Vector[Double]], f: id[Double] => id[Double]): id[Vector[Double]] = {
+      val res = for (i <- 0 until x.size) yield f(x(i))
+      res.toVector
+    }
+  }
+
   implicit object UnstagedEvidence extends NumericOps[Double,id] {
     def plus(x: Double, y: Double): Double = x + y
     def fromInt(x: Int) = x.toDouble
@@ -35,7 +44,7 @@ object myimplicits{
 
 
 //once you import LMS you have Exp[T], Def[T] and TP(exp: Exp[T], def: Def[T])
-trait StagedNumeric extends Expressions{
+trait StagedNumeric extends Expressions with InternalFunctionsExp{
   //Expressions defines the toAtom Method that converts Defs
   //to TP's by giving it a new Exp(symbolnumber) and returning a TP
   case class NumericPlus[T](lhs: Exp[T], rhs: Exp[T])(implicit ntype: NumericOps[T,Exp]) extends Def[T]
@@ -45,6 +54,12 @@ trait StagedNumeric extends Expressions{
   case class VectorApply[T:Manifest](a: Exp[Vector[T]], n: Exp[Int]) extends Def[T]
   def vector_obj_fromseq[T:Manifest](xs: Seq[Exp[T]]): Exp[Vector[T]] = VectorFromSeq(xs)
   def vector_apply[T:Manifest](x: Exp[Vector[T]], n: Exp[Int]): Exp[T] = VectorApply(x, n)
+
+  case class MyMap(x: Exp[Vector[Double]], f: Exp[Double] => Exp[Double]) extends Def[Vector[Double]]
+  def mymap(x: Exp[Vector[Double]], f: Exp[Double] => Exp[Double]): Exp[Vector[Double]] = {
+    val lambda = doLambda(f)
+    MyMap(x,lambda)
+  }
 
   case class MyConst[T](x: T) extends Def[T]
   def myconst[T: Manifest](x: T): Exp[T] = toAtom(MyConst(x))
@@ -60,21 +75,29 @@ trait StagedNumeric extends Expressions{
     def ini(from: Seq[Exp[T]]): Exp[Vector[T]] = vector_obj_fromseq(from)
     def unit(x: Int): Exp[Int] = myconst(x)
   }
-
   implicit object StagedDoubleVectorEvidence extends StagedVectorEvidence[Double]
 
-
+  implicit object StagedFDouble extends MapOps[Exp,Vector,Double]{
+    def callmapArray(x: Exp[Vector[Double]], f: Exp[Double] => Exp[Double]): Exp[Vector[Double]] = {
+      mymap(x,f)
+    }
+  }
 
 }
 
-
-
-
 class MyDSL extends StagedNumeric {
-
-  def mathfunction[S[_],T](x: S[Vector[T]])(implicit ntypeclass: NumericOps[T,S], vtypeclass: VectorOps[S,Vector,T]): S[Vector[T]] = {
+  def mathfunction[S[_],T](xo: S[Vector[T]])
+                          (implicit ntypeclass: NumericOps[T,S],
+                           vtypeclass: VectorOps[S,Vector,T],
+                           ftypeclass: MapOps[S,Vector,T] ): S[Vector[T]] = {
     import ntypeclass._
     import vtypeclass._
+    import ftypeclass._
+
+    val myf : (S[T] => S[T]) = (in: S[T]) => plus(in,in)
+
+    val x = ftypeclass.callmapArray(xo,myf)
+
     val idx1:S[Int] = vtypeclass.unit(0)
     val idx2:S[Int] = vtypeclass.unit(1)
     val ele1 = apply(x,idx1)
@@ -99,7 +122,7 @@ object Math extends App{
 
   val ev1:  NumericOps[Double,myimplicits.id] = myimplicits.UnstagedEvidence
   val uvector: myimplicits.id[Vector[Double]] = Vector(1.1,2.2)
-  dslobject.mathfunction(uvector)(ev1,myimplicits.UnstagedDoubleVectorEvidence)
+  dslobject.mathfunction(uvector)(ev1,myimplicits.UnstagedDoubleVectorEvidence,myimplicits.UnstagedFDouble)
   import dslobject._
   dslobject.mathfunction(staged_input)//(dslobject.StagedEvidence,dslobject.Stag)
   println("...")
